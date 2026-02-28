@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Should We Do This?</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header>
+        <h1>Should We Do This?</h1>
+        <p class="subtitle">An evidence-based policy checker for animal shelters</p>
+        <p class="description">Enter a proposed rule, policy, or procedure and get an analysis of how it might affect adoption rates and animal outcomes.</p>
+    </header>
+
+    <main>
+        <form id="evaluate-form">
+            <label for="policy-input">Describe the proposed policy:</label>
+            <textarea
+                id="policy-input"
+                name="policy"
+                rows="5"
+                placeholder="Example: We want to require adopters to provide two personal references and a letter from their veterinarian before being approved to adopt."
+                required
+            ></textarea>
+            <button type="submit" id="submit-btn">Evaluate This Policy</button>
+            <p class="form-note">Evaluated using AI and current animal welfare research. This tool provides guidance, not definitive answers.</p>
+        </form>
+
+        <div id="loading" class="loading hidden">
+            <div class="spinner"></div>
+            <p>Analyzing your policy against current animal welfare research...</p>
+        </div>
+
+        <div id="error" class="error-message hidden"></div>
+
+        <div id="results" class="hidden">
+            <div id="verdict" class="verdict">
+                <h2 id="verdict-label"></h2>
+                <p id="verdict-summary"></p>
+            </div>
+
+            <div class="analysis-grid">
+                <div class="card" id="card-adoption">
+                    <h3>Adoption Impact <span class="badge" id="badge-adoption"></span></h3>
+                    <p id="text-adoption"></p>
+                </div>
+                <div class="card" id="card-los">
+                    <h3>Length of Stay <span class="badge" id="badge-los"></span></h3>
+                    <p id="text-los"></p>
+                </div>
+                <div class="card" id="card-save">
+                    <h3>Save Rate <span class="badge" id="badge-save"></span></h3>
+                    <p id="text-save"></p>
+                </div>
+                <div class="card" id="card-evidence">
+                    <h3>Evidence Basis <span class="badge" id="badge-evidence"></span></h3>
+                    <p id="text-evidence"></p>
+                </div>
+            </div>
+
+            <section class="list-section" id="consequences-section">
+                <h3>Unintended Consequences</h3>
+                <ul id="consequences-list"></ul>
+            </section>
+
+            <section class="list-section" id="alternatives-section">
+                <h3>Alternatives to Consider</h3>
+                <ul id="alternatives-list"></ul>
+            </section>
+
+            <section class="bottom-line-section">
+                <h3>The Bottom Line</h3>
+                <div class="bottom-line-box">
+                    <p id="bottom-line"></p>
+                </div>
+            </section>
+
+            <div class="print-bar">
+                <button type="button" id="print-btn" class="print-btn">Print / Save as PDF</button>
+            </div>
+
+            <div id="print-header" class="print-only">
+                <h1>Should We Do This?</h1>
+                <p class="print-policy-label">Proposed Policy:</p>
+                <p id="print-policy-text" class="print-policy-text"></p>
+            </div>
+        </div>
+
+        <div id="raw-fallback" class="hidden">
+            <h3>Analysis</h3>
+            <pre id="raw-text"></pre>
+        </div>
+    </main>
+
+    <footer>
+        <p>This tool uses AI to provide guidance based on published animal welfare research. It is not a substitute for professional judgment, community context, or legal advice.</p>
+    </footer>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
