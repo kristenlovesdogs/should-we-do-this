@@ -39,10 +39,19 @@ h1 {
     margin: 0 auto;
 }
 
+.credit {
+    font-size: 0.85rem;
+    color: #888;
+    margin-top: 0.75rem;
+}
+
 /* Form */
 
 form {
     margin-bottom: 2rem;
+    background: #b2e8e4;
+    padding: 1.5rem;
+    border-radius: 10px;
 }
 
 label {
@@ -139,6 +148,91 @@ button[type="submit"]:disabled {
     border-left: 4px solid #c62828;
     margin-bottom: 1.5rem;
     font-size: 0.95rem;
+}
+
+/* Clarification */
+
+.clarification {
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    border-left: 6px solid #f9a825;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.clarification h2 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #e65100;
+    margin-bottom: 0.5rem;
+}
+
+.clarification > p {
+    font-size: 0.95rem;
+    color: #444;
+    line-height: 1.5;
+    margin-bottom: 1.25rem;
+}
+
+.clarification-questions {
+    margin-bottom: 1.25rem;
+}
+
+.clarification-questions h3,
+.clarification-suggestion h3 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.clarification-questions ul {
+    list-style: none;
+    padding: 0;
+}
+
+.clarification-questions li {
+    padding: 0.35rem 0 0.35rem 1.25rem;
+    position: relative;
+    font-size: 0.9rem;
+    color: #444;
+    line-height: 1.5;
+}
+
+.clarification-questions li::before {
+    content: "?";
+    position: absolute;
+    left: 0;
+    font-weight: 700;
+    color: #f9a825;
+}
+
+.suggested-rewrite {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 0.875rem;
+    font-size: 0.9rem;
+    color: #333;
+    line-height: 1.5;
+    margin-bottom: 0.75rem;
+}
+
+.use-suggestion-btn {
+    padding: 0.625rem 1.5rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #fff;
+    background: #f9a825;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.use-suggestion-btn:hover {
+    background: #f57f17;
 }
 
 /* Verdict */
@@ -348,6 +442,21 @@ footer p {
     color: #999;
     max-width: 480px;
     margin: 0 auto;
+}
+
+.beta-notice {
+    margin-top: 0.75rem;
+    font-weight: 600;
+    color: #777;
+}
+
+.beta-notice a {
+    color: #1a73e8;
+    text-decoration: none;
+}
+
+.beta-notice a:hover {
+    text-decoration: underline;
 }
 
 /* Utility */

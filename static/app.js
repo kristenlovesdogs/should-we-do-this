@@ -5,7 +5,15 @@ document.addEventListener("DOMContentLoaded", function () {
     var loading = document.getElementById("loading");
     var errorDiv = document.getElementById("error");
     var results = document.getElementById("results");
+    var clarification = document.getElementById("clarification");
     var rawFallback = document.getElementById("raw-fallback");
+
+    document.getElementById("use-suggestion-btn").addEventListener("click", function () {
+        var rewrite = document.getElementById("clarification-rewrite").textContent;
+        input.value = rewrite;
+        clarification.classList.add("hidden");
+        form.dispatchEvent(new Event("submit"));
+    });
 
     document.getElementById("print-btn").addEventListener("click", function () {
         document.getElementById("print-policy-text").textContent = input.value.trim();
@@ -20,6 +28,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         // Reset UI
         results.classList.add("hidden");
+        clarification.classList.add("hidden");
         rawFallback.classList.add("hidden");
         errorDiv.classList.add("hidden");
         loading.classList.remove("hidden");
@@ -51,6 +60,11 @@ document.addEventListener("DOMContentLoaded", function () {
                     return;
                 }
 
+                if (result.data.clarification_needed) {
+                    renderClarification(result.data);
+                    return;
+                }
+
                 renderResults(result.data);
             })
             .catch(function () {
@@ -69,6 +83,14 @@ document.addEventListener("DOMContentLoaded", function () {
     function showRaw(text) {
         document.getElementById("raw-text").textContent = text;
         rawFallback.classList.remove("hidden");
+    }
+
+    function renderClarification(data) {
+        document.getElementById("clarification-message").textContent = data.message || "";
+        populateList("clarification-questions-list", data.questions);
+        document.getElementById("clarification-rewrite").textContent = data.suggested_rewrite || "";
+        clarification.classList.remove("hidden");
+        clarification.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
     function renderResults(data) {

@@ -11,6 +11,7 @@
         <h1>Should We Do This?</h1>
         <p class="subtitle">An evidence-based policy checker for animal shelters</p>
         <p class="description">Enter a proposed rule, policy, or procedure and get an analysis of how it might affect adoption rates and animal outcomes.</p>
+        <p class="credit">Created by Kristen Hassen, Outcomes Consulting</p>
     </header>
 
     <main>
@@ -33,6 +34,20 @@
         </div>
 
         <div id="error" class="error-message hidden"></div>
+
+        <div id="clarification" class="clarification hidden">
+            <h2>Can you be more specific?</h2>
+            <p id="clarification-message"></p>
+            <div class="clarification-questions">
+                <h3>A few questions to help narrow it down:</h3>
+                <ul id="clarification-questions-list"></ul>
+            </div>
+            <div class="clarification-suggestion">
+                <h3>Did you mean something like this?</h3>
+                <p id="clarification-rewrite" class="suggested-rewrite"></p>
+                <button type="button" id="use-suggestion-btn" class="use-suggestion-btn">Use This &amp; Evaluate</button>
+            </div>
+        </div>
 
         <div id="results" class="hidden">
             <div id="verdict" class="verdict">
@@ -95,6 +110,7 @@
 
     <footer>
         <p>This tool uses AI to provide guidance based on published animal welfare research. It is not a substitute for professional judgment, community context, or legal advice.</p>
+        <p class="beta-notice">This app is currently in beta. We'd love your feedback — email us at <a href="mailto:office@outcomesforpets.com">office@outcomesforpets.com</a>.</p>
     </footer>
 
     <script src="/static/app.js"></script>
