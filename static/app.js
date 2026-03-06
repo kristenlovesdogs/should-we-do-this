@@ -93,7 +93,12 @@ document.addEventListener("DOMContentLoaded", function () {
         clarification.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
+    var currentSources = [];
+
     function renderResults(data) {
+        // Store sources for citation tooltips
+        currentSources = data.sources || [];
+
         // Verdict
         var verdictEl = document.getElementById("verdict");
         var verdictLabel = document.getElementById("verdict-label");
@@ -127,8 +132,26 @@ document.addEventListener("DOMContentLoaded", function () {
         // Bottom line
         document.getElementById("bottom-line").textContent = data.bottom_line || "";
 
+        // Sources
+        renderSources(currentSources);
+
         results.classList.remove("hidden");
         results.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function injectCitations(text) {
+        // Replace [1], [2], etc. with styled citation badges
+        // Group adjacent citations like [1][2] into a single cluster
+        return text.replace(/(\[\d+\](?:\s*\[\d+\])*)/g, function (match) {
+            var nums = match.match(/\[(\d+)\]/g);
+            var badges = nums.map(function (n) {
+                var num = n.replace(/[\[\]]/g, "");
+                var source = currentSources.find(function (s) { return String(s.id) === num; });
+                var tooltip = source ? source.title + " — " + source.author : "Source " + num;
+                return '<span class="citation-badge" data-source="' + num + '" title="' + tooltip.replace(/"/g, '&quot;') + '">' + num + '</span>';
+            });
+            return '<span class="citation-cluster">' + badges.join("") + '</span>';
+        });
     }
 
     function setCard(id, data) {
@@ -138,7 +161,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         badge.textContent = data.rating;
         badge.className = "badge " + data.rating;
-        text.textContent = data.explanation || "";
+        text.innerHTML = injectCitations(data.explanation || "");
     }
 
     function setCardEvidence(id, data) {
@@ -148,7 +171,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         badge.textContent = data.rating;
         badge.className = "badge " + data.rating;
-        text.textContent = data.explanation || "";
+        text.innerHTML = injectCitations(data.explanation || "");
     }
 
     function populateList(listId, items) {
@@ -158,8 +181,34 @@ document.addEventListener("DOMContentLoaded", function () {
 
         items.forEach(function (item) {
             var li = document.createElement("li");
-            li.textContent = item;
+            li.innerHTML = injectCitations(item);
             list.appendChild(li);
         });
+    }
+
+    function renderSources(sources) {
+        var section = document.getElementById("sources-section");
+        var list = document.getElementById("sources-list");
+        list.innerHTML = "";
+
+        if (!sources || !sources.length) {
+            section.style.display = "none";
+            return;
+        }
+
+        section.style.display = "";
+        sources.forEach(function (source) {
+            var li = document.createElement("li");
+            li.id = "source-" + source.id;
+            li.innerHTML = '<span class="source-title">' + escapeHtml(source.title) + '</span>' +
+                '<span class="source-author">' + escapeHtml(source.author) + '</span>';
+            list.appendChild(li);
+        });
+    }
+
+    function escapeHtml(str) {
+        var div = document.createElement("div");
+        div.textContent = str || "";
+        return div.innerHTML;
     }
 });

@@ -416,6 +416,80 @@ button[type="submit"]:disabled {
     line-height: 1.6;
 }
 
+/* Citation badges */
+
+.citation-cluster {
+    display: inline;
+    white-space: nowrap;
+}
+
+.citation-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #e8edf4;
+    color: #4a6fa5;
+    font-size: 0.65rem;
+    font-weight: 700;
+    cursor: default;
+    vertical-align: super;
+    margin: 0 1px;
+    position: relative;
+    transition: background 0.15s, color 0.15s;
+    line-height: 1;
+}
+
+.citation-badge:hover {
+    background: #4a6fa5;
+    color: #fff;
+}
+
+/* Sources section */
+
+.sources-section {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.sources-section h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.75rem;
+}
+
+.sources-section ol {
+    padding-left: 1.5rem;
+    margin: 0;
+}
+
+.sources-section li {
+    padding: 0.3rem 0;
+    font-size: 0.85rem;
+    color: #555;
+    line-height: 1.5;
+}
+
+.source-title {
+    font-weight: 600;
+    color: #333;
+}
+
+.source-author {
+    color: #777;
+    margin-left: 0.25rem;
+}
+
+.source-author::before {
+    content: "\2014\00a0";
+}
+
 /* Raw fallback */
 
 #raw-fallback pre {
@@ -560,6 +634,15 @@ footer p {
 
     .bottom-line-box {
         break-inside: avoid;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .sources-section {
+        break-inside: avoid;
+    }
+
+    .citation-badge {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }

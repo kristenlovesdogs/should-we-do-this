@@ -1,6 +1,7 @@
 import json
 import os
 
+import anthropic
 from anthropic import Anthropic
 from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request
@@ -127,29 +128,52 @@ For clear policies, you MUST respond with valid JSON in exactly this structure:
   "analysis": {
     "adoption_impact": {
       "rating": "positive" | "neutral" | "negative",
-      "explanation": "Two to four sentences on how this affects adoption rates and accessibility."
+      "explanation": "Two to four sentences on how this affects adoption rates and accessibility. Include citation numbers like [1] or [2] referencing the sources list."
     },
     "length_of_stay_impact": {
       "rating": "positive" | "neutral" | "negative",
-      "explanation": "Two to four sentences on how this affects how long animals remain in the shelter."
+      "explanation": "Two to four sentences on how this affects how long animals remain in the shelter. Include citation numbers."
     },
     "save_rate_impact": {
       "rating": "positive" | "neutral" | "negative",
-      "explanation": "Two to four sentences on how this affects live release and save rates."
+      "explanation": "Two to four sentences on how this affects live release and save rates. Include citation numbers."
     },
     "evidence_basis": {
       "rating": "strong" | "moderate" | "weak" | "contradicted",
-      "explanation": "Two to four sentences on what research says about this type of policy."
+      "explanation": "Two to four sentences on what research says about this type of policy. Include citation numbers."
     },
     "unintended_consequences": [
-      "Each item is one specific unintended consequence, stated concisely."
+      "Each item is one specific unintended consequence, stated concisely. Include citation numbers where relevant."
     ],
     "alternatives": [
-      "Each item is one alternative approach that addresses the same underlying concern with fewer barriers. Be specific and actionable."
+      "Each item is one alternative approach that addresses the same underlying concern with fewer barriers. Be specific and actionable. Include citation numbers where relevant."
     ]
   },
-  "bottom_line": "A single paragraph, written in plain conversational language, summarizing the key takeaway. Address the reader directly as 'you' and be honest but respectful."
+  "sources": [
+    {
+      "id": 1,
+      "title": "Short title of the research, report, or program referenced",
+      "author": "Organization or researcher name (e.g. ASPCA, Emily Weiss, UC Davis)"
+    }
+  ],
+  "bottom_line": "A single paragraph, written in plain conversational language, summarizing the key takeaway. Address the reader directly as 'you' and be honest but respectful. Do NOT include citation numbers in the bottom line."
 }
+
+CITATION RULES:
+- Use bracketed numbers like [1], [2], [3] inline in explanation text, unintended \
+consequences, and alternatives to reference specific sources.
+- Place citations at the end of the specific claim they support, not at the end of \
+the whole paragraph.
+- The "sources" array must list every source you cited, numbered starting at 1.
+- Each source must have an "id" (matching the citation number), a "title" \
+(short descriptive title of the specific research, report, study, model, or program), \
+and an "author" (the organization or lead researcher).
+- Draw from the real research base you know: ASPCA studies, Maddie's Fund reports, \
+HASS model documentation, UC Davis and University of Florida shelter medicine \
+programs, Emily Weiss's research, and other published animal welfare research.
+- Typically include 3-8 sources per analysis. Only cite sources that are real and \
+that you are confident exist.
+- Do NOT include URLs in the sources — just title and author.
 
 Important guidelines for your analysis:
 - Be honest and direct. If a policy is harmful, say so clearly.
@@ -187,8 +211,17 @@ def evaluate():
             system=SYSTEM_PROMPT,
             messages=[{"role": "user", "content": policy}],
         )
+    except anthropic.AuthenticationError:
+        app.logger.error("Anthropic API authentication failed — check ANTHROPIC_API_KEY")
+        return jsonify({"error": "The AI service is temporarily unavailable. We're working on it!"}), 502
+    except anthropic.RateLimitError:
+        return jsonify({"error": "We're getting a lot of traffic right now. Please wait a moment and try again."}), 429
+    except anthropic.APIConnectionError:
+        app.logger.error("Could not connect to Anthropic API")
+        return jsonify({"error": "Could not connect to the AI service. Please try again in a moment."}), 502
     except Exception as e:
-        return jsonify({"error": f"Failed to reach the AI service. Please try again. ({type(e).__name__})"}), 502
+        app.logger.error(f"Unexpected Anthropic API error: {type(e).__name__}: {e}")
+        return jsonify({"error": "Something went wrong. Please try again."}), 502
 
     raw = message.content[0].text
 
