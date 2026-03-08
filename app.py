@@ -184,10 +184,17 @@ maddiesfund.org, sheltermedicine.vetmed.ufl.edu, humanepro.org, \
 bestfriends.org, or DOI links for peer-reviewed papers). If you are not \
 confident the URL is correct, set "url" to null — the app will automatically \
 generate a search link for the user.
-- Draw from the real research base you know: ASPCA studies, Maddie's Fund reports, \
-HASS model documentation, UC Davis and University of Florida shelter medicine \
-programs, Emily Weiss's research, Best Friends Animal Society, peer-reviewed \
-journals, and other published animal welfare research.
+- Draw from the full breadth of animal welfare research. This includes but is not \
+limited to: ASPCA studies, Maddie's Fund reports, HASS model documentation, \
+UC Davis and University of Florida shelter medicine programs, Emily Weiss's \
+research, Best Friends Animal Society, and Humane Pro / HSUS resources. \
+Equally important, draw from peer-reviewed research published in journals such \
+as the Journal of Applied Animal Welfare Science, Animals, Journal of Veterinary \
+Behavior, Journal of Shelter Medicine and Community Animal Health, and other \
+scientific publications. Peer-reviewed studies may come from independent \
+researchers and universities that are not affiliated with any national \
+organization — these are just as valid and important as organizational reports. \
+Always prioritize the strongest available evidence regardless of its source.
 - Typically include 3-8 sources per analysis. Only cite sources that are real and \
 that you are confident exist.
 
