@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", function () {
     var rawFallback = document.getElementById("raw-fallback");
 
     document.getElementById("use-suggestion-btn").addEventListener("click", function () {
-        var rewrite = document.getElementById("clarification-rewrite").textContent;
+        var rewrite = document.getElementById("clarification-rewrite").value.trim();
         input.value = rewrite;
         clarification.classList.add("hidden");
         form.dispatchEvent(new Event("submit"));
@@ -88,7 +88,7 @@ document.addEventListener("DOMContentLoaded", function () {
     function renderClarification(data) {
         document.getElementById("clarification-message").textContent = data.message || "";
         populateList("clarification-questions-list", data.questions);
-        document.getElementById("clarification-rewrite").textContent = data.suggested_rewrite || "";
+        document.getElementById("clarification-rewrite").value = data.suggested_rewrite || "";
         clarification.classList.remove("hidden");
         clarification.scrollIntoView({ behavior: "smooth", block: "start" });
     }
@@ -139,6 +139,13 @@ document.addEventListener("DOMContentLoaded", function () {
         results.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
+    function getSourceUrl(source) {
+        if (source && source.url) return source.url;
+        if (!source) return null;
+        var query = encodeURIComponent(source.title + " " + source.author);
+        return "https://scholar.google.com/scholar?q=" + query;
+    }
+
     function injectCitations(text) {
         // Replace [1], [2], etc. with styled citation badges
         // Group adjacent citations like [1][2] into a single cluster
@@ -148,6 +155,10 @@ document.addEventListener("DOMContentLoaded", function () {
                 var num = n.replace(/[\[\]]/g, "");
                 var source = currentSources.find(function (s) { return String(s.id) === num; });
                 var tooltip = source ? source.title + " — " + source.author : "Source " + num;
+                var url = getSourceUrl(source);
+                if (url) {
+                    return '<a href="' + url.replace(/"/g, '&quot;') + '" target="_blank" rel="noopener noreferrer" class="citation-badge" data-source="' + num + '" title="' + tooltip.replace(/"/g, '&quot;') + '">' + num + '</a>';
+                }
                 return '<span class="citation-badge" data-source="' + num + '" title="' + tooltip.replace(/"/g, '&quot;') + '">' + num + '</span>';
             });
             return '<span class="citation-cluster">' + badges.join("") + '</span>';
@@ -200,7 +211,14 @@ document.addEventListener("DOMContentLoaded", function () {
         sources.forEach(function (source) {
             var li = document.createElement("li");
             li.id = "source-" + source.id;
-            li.innerHTML = '<span class="source-title">' + escapeHtml(source.title) + '</span>' +
+            var url = getSourceUrl(source);
+            var titleHtml;
+            if (url) {
+                titleHtml = '<a href="' + url.replace(/"/g, '&quot;') + '" target="_blank" rel="noopener noreferrer" class="source-title">' + escapeHtml(source.title) + '</a>';
+            } else {
+                titleHtml = '<span class="source-title">' + escapeHtml(source.title) + '</span>';
+            }
+            li.innerHTML = titleHtml +
                 '<span class="source-author">' + escapeHtml(source.author) + '</span>';
             list.appendChild(li);
         });

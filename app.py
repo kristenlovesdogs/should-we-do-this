@@ -58,6 +58,15 @@ increase adoption confidence and do not significantly increase return rates. \
 Punitive return policies (fees, shaming, blacklisting) discourage returns and \
 lead to worse outcomes (animals abandoned or rehomed informally).
 
+- The research by Gary Patronek and Janis Bradley ("No Better Than Flipping a \
+Coin") demonstrating that standardized shelter behavior evaluations (such as \
+food guarding tests and other provocation-based assessments) have poor \
+predictive validity for post-adoption behavior. These evaluations are no \
+better than chance at predicting which dogs will have behavior problems in \
+homes, yet they are routinely used to justify euthanasia or adoption \
+restrictions. Policies that rely on behavior evaluations as gatekeeping tools \
+result in the unnecessary killing of adoptable animals.
+
 - That breed-specific policies (breed bans, mandatory spay/neuter for specific \
 breeds, breed-based behavioral assessments) are not supported by evidence and \
 disproportionately affect adopters from marginalized communities.
@@ -153,7 +162,8 @@ For clear policies, you MUST respond with valid JSON in exactly this structure:
     {
       "id": 1,
       "title": "Short title of the research, report, or program referenced",
-      "author": "Organization or researcher name (e.g. ASPCA, Emily Weiss, UC Davis)"
+      "author": "Organization or researcher name (e.g. ASPCA, Emily Weiss, UC Davis)",
+      "url": "https://example.com/source OR null"
     }
   ],
   "bottom_line": "A single paragraph, written in plain conversational language, summarizing the key takeaway. Address the reader directly as 'you' and be honest but respectful. Do NOT include citation numbers in the bottom line."
@@ -167,13 +177,19 @@ the whole paragraph.
 - The "sources" array must list every source you cited, numbered starting at 1.
 - Each source must have an "id" (matching the citation number), a "title" \
 (short descriptive title of the specific research, report, study, model, or program), \
-and an "author" (the organization or lead researcher).
+an "author" (the organization or lead researcher), and a "url" field.
+- For the "url" field: include a direct URL to the source ONLY if you are highly \
+confident it is a real, working link (e.g., well-known pages on aspca.org, \
+maddiesfund.org, sheltermedicine.vetmed.ufl.edu, humanepro.org, \
+bestfriends.org, or DOI links for peer-reviewed papers). If you are not \
+confident the URL is correct, set "url" to null — the app will automatically \
+generate a search link for the user.
 - Draw from the real research base you know: ASPCA studies, Maddie's Fund reports, \
 HASS model documentation, UC Davis and University of Florida shelter medicine \
-programs, Emily Weiss's research, and other published animal welfare research.
+programs, Emily Weiss's research, Best Friends Animal Society, peer-reviewed \
+journals, and other published animal welfare research.
 - Typically include 3-8 sources per analysis. Only cite sources that are real and \
 that you are confident exist.
-- Do NOT include URLs in the sources — just title and author.
 
 Important guidelines for your analysis:
 - Be honest and direct. If a policy is harmful, say so clearly.
@@ -185,6 +201,22 @@ offer a path forward that addresses the legitimate concern.
 - If a policy is genuinely good and evidence-based, say so. Not every policy is \
 bad. Enrichment programs, managed intake by appointment, foster-to-adopt \
 programs, and many other innovations deserve support.
+- When the evidence is not clear-cut or multiple valid approaches exist, present \
+ALL relevant perspectives as long as each is supported by research, data, or \
+established best practices. Do not default to a single viewpoint when the field \
+has legitimate debate. For example, both Dogs Playing for Life and the Shelter \
+Playgroup Alliance offer evidence-based playgroup models that shelters use \
+successfully — neither should be presented as the only valid approach. Give the \
+user the full picture so they can make an informed decision for their context.
+- When a practice is well-supported by research but may conflict with US state \
+or federal laws, present the evidence honestly AND clearly flag the legal \
+considerations. Do not suppress research-backed practices because of legal \
+barriers, but do not recommend them without noting that they may require legal \
+review. For example, dog TNR (trap-neuter-return) is a well-supported \
+population management strategy used internationally, but it may conflict with \
+animal control, leash, or stray animal laws in many US jurisdictions. In these \
+cases, acknowledge the research, note the potential legal issues, and recommend \
+the user consult local and state regulations or legal counsel before proceeding.
 - Return ONLY the JSON object. No markdown, no code fences, no preamble."""
 
 
