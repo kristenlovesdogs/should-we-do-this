@@ -1,5 +1,7 @@
 import json
 import os
+import pathlib
+import uuid
 
 import anthropic
 from anthropic import Anthropic
@@ -9,6 +11,9 @@ from flask import Flask, jsonify, render_template, request
 load_dotenv(override=True)
 
 app = Flask(__name__)
+
+SHARES_DIR = pathlib.Path("/tmp/swdt-shares")
+SHARES_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def get_client():
@@ -230,6 +235,31 @@ the user consult local and state regulations or legal counsel before proceeding.
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route("/share", methods=["POST"])
+def share():
+    data = request.get_json()
+    if not data or "policy" not in data or "results" not in data:
+        return jsonify({"error": "Invalid request."}), 400
+
+    share_id = uuid.uuid4().hex[:10]
+    share_path = SHARES_DIR / f"{share_id}.json"
+    share_path.write_text(json.dumps({
+        "policy": data["policy"],
+        "results": data["results"],
+    }))
+    return jsonify({"id": share_id})
+
+
+@app.route("/s/<share_id>")
+def shared(share_id):
+    share_path = SHARES_DIR / f"{share_id}.json"
+    if not share_path.exists():
+        return render_template("index.html")
+
+    share_data = json.loads(share_path.read_text())
+    return render_template("index.html", share_data=share_data)
 
 
 @app.route("/evaluate", methods=["POST"])

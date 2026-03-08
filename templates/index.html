@@ -30,7 +30,7 @@
 
         <div id="loading" class="loading hidden">
             <div class="spinner"></div>
-            <p>Analyzing your policy against current animal welfare research...</p>
+            <p id="loading-text">Sniffing out the research on this one...</p>
         </div>
 
         <div id="error" class="error-message hidden"></div>
@@ -48,6 +48,10 @@
                 <textarea id="clarification-rewrite" class="suggested-rewrite" rows="4"></textarea>
                 <button type="button" id="use-suggestion-btn" class="use-suggestion-btn">Evaluate This</button>
             </div>
+        </div>
+
+        <div id="shared-banner" class="shared-banner hidden">
+            <p>You're viewing a shared policy analysis. <a href="/">Evaluate your own policy</a></p>
         </div>
 
         <div id="results" class="hidden">
@@ -98,6 +102,7 @@
             </section>
 
             <div class="print-bar">
+                <button type="button" id="share-btn" class="share-btn">Copy Share Link</button>
                 <button type="button" id="print-btn" class="print-btn">Print / Save as PDF</button>
             </div>
 
@@ -119,6 +124,9 @@
         <p class="beta-notice">This app is currently in beta. We'd love your feedback — email us at <a href="mailto:kristen@outcomesforpets.com">kristen@outcomesforpets.com</a>.</p>
     </footer>
 
+    {% if share_data %}
+    <script>window.SHARE_DATA = {{ share_data | tojson }};</script>
+    {% endif %}
     <script src="/static/app.js"></script>
 </body>
 </html>

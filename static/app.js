@@ -3,10 +3,114 @@ document.addEventListener("DOMContentLoaded", function () {
     var input = document.getElementById("policy-input");
     var submitBtn = document.getElementById("submit-btn");
     var loading = document.getElementById("loading");
+    var loadingText = document.getElementById("loading-text");
     var errorDiv = document.getElementById("error");
     var results = document.getElementById("results");
     var clarification = document.getElementById("clarification");
     var rawFallback = document.getElementById("raw-fallback");
+
+    var loadingMessages = [
+        "Sniffing out the research on this one...",
+        "Fetching the evidence...",
+        "Digging through the data...",
+        "Good policy? Sit. Stay. We\u2019re checking...",
+        "Retrieving the latest studies...",
+        "On the scent of the research...",
+        "Tail-wagging analysis incoming...",
+        "Pawing through the research...",
+        "Even the cats are curious about this one...",
+        "Purring through the data..."
+    ];
+    var loadingInterval = null;
+    var lastResultData = null;
+
+    function startLoadingMessages() {
+        var index = 0;
+        loadingText.textContent = loadingMessages[0];
+        loadingInterval = setInterval(function () {
+            index = (index + 1) % loadingMessages.length;
+            loadingText.textContent = loadingMessages[index];
+        }, 3000);
+    }
+
+    function stopLoadingMessages() {
+        if (loadingInterval) {
+            clearInterval(loadingInterval);
+            loadingInterval = null;
+        }
+    }
+
+    // Share button
+    document.getElementById("share-btn").addEventListener("click", function () {
+        if (!lastResultData) return;
+
+        var shareBtn = document.getElementById("share-btn");
+        var policy = input.value.trim();
+
+        shareBtn.disabled = true;
+        shareBtn.textContent = "Saving...";
+
+        fetch("/share", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ policy: policy, results: lastResultData }),
+        })
+            .then(function (response) {
+                return response.json();
+            })
+            .then(function (data) {
+                if (data.id) {
+                    var url = window.location.origin + "/s/" + data.id;
+                    var copied = false;
+                    function onCopied() {
+                        if (copied) return;
+                        copied = true;
+                        shareBtn.textContent = "Link copied!";
+                        setTimeout(function () {
+                            shareBtn.disabled = false;
+                            shareBtn.textContent = "Copy Share Link";
+                        }, 2000);
+                    }
+                    function onFallback() {
+                        if (copied) return;
+                        copied = true;
+                        window.prompt("Copy this link:", url);
+                        shareBtn.disabled = false;
+                        shareBtn.textContent = "Copy Share Link";
+                    }
+                    try {
+                        navigator.clipboard.writeText(url).then(onCopied).catch(onFallback);
+                        // Safety timeout in case clipboard promise hangs
+                        setTimeout(function () { if (!copied) onFallback(); }, 2000);
+                    } catch (e) {
+                        onFallback();
+                    }
+                } else {
+                    shareBtn.disabled = false;
+                    shareBtn.textContent = "Copy Share Link";
+                }
+            })
+            .catch(function () {
+                shareBtn.disabled = false;
+                shareBtn.textContent = "Copy Share Link";
+            });
+    });
+
+    // Check for shared data on page load
+    if (window.SHARE_DATA) {
+        var shared = window.SHARE_DATA;
+        input.value = shared.policy || "";
+        form.style.display = "none";
+        document.getElementById("shared-banner").classList.remove("hidden");
+
+        if (shared.results) {
+            if (shared.results.clarification_needed) {
+                renderClarification(shared.results);
+            } else {
+                renderResults(shared.results);
+            }
+        }
+    }
 
     document.getElementById("use-suggestion-btn").addEventListener("click", function () {
         var rewrite = document.getElementById("clarification-rewrite").value.trim();
@@ -34,6 +138,7 @@ document.addEventListener("DOMContentLoaded", function () {
         loading.classList.remove("hidden");
         submitBtn.disabled = true;
         submitBtn.textContent = "Evaluating...";
+        startLoadingMessages();
 
         fetch("/evaluate", {
             method: "POST",
@@ -46,6 +151,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 });
             })
             .then(function (result) {
+                stopLoadingMessages();
                 loading.classList.add("hidden");
                 submitBtn.disabled = false;
                 submitBtn.textContent = "Evaluate This Policy";
@@ -68,6 +174,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 renderResults(result.data);
             })
             .catch(function () {
+                stopLoadingMessages();
                 loading.classList.add("hidden");
                 submitBtn.disabled = false;
                 submitBtn.textContent = "Evaluate This Policy";
@@ -96,6 +203,9 @@ document.addEventListener("DOMContentLoaded", function () {
     var currentSources = [];
 
     function renderResults(data) {
+        // Store for sharing
+        lastResultData = data;
+
         // Store sources for citation tooltips
         currentSources = data.sources || [];
 
