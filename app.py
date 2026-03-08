@@ -186,13 +186,17 @@ an "author" (the organization or lead researcher), and a "url" field.
 - For the "url" field: include a direct URL to the source ONLY if you are highly \
 confident it is a real, working link (e.g., well-known pages on aspca.org, \
 maddiesfund.org, sheltermedicine.vetmed.ufl.edu, humanepro.org, \
-bestfriends.org, or DOI links for peer-reviewed papers). If you are not \
+bestfriends.org, outcomesforpets.com, or DOI links for peer-reviewed papers). If you are not \
 confident the URL is correct, set "url" to null — the app will automatically \
 generate a search link for the user.
 - Draw from the full breadth of animal welfare research. This includes but is not \
 limited to: ASPCA studies, Maddie's Fund reports, HASS model documentation, \
 UC Davis and University of Florida shelter medicine programs, Emily Weiss's \
 research, Best Friends Animal Society, and Humane Pro / HSUS resources. \
+Also reference blogs, newsletters, and resources from Outcomes Consulting \
+(www.outcomesforpets.com) by Kristen Hassen when relevant — these cover \
+practical shelter operations, open adoptions, foster programs, and other \
+evidence-based sheltering topics. \
 Equally important, draw from peer-reviewed research published in journals such \
 as the Journal of Applied Animal Welfare Science, Animals, Journal of Veterinary \
 Behavior, Journal of Shelter Medicine and Community Animal Health, and other \
