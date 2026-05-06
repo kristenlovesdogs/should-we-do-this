@@ -279,9 +279,17 @@ def evaluate():
     try:
         client = get_client()
         message = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=4096,
-            system=SYSTEM_PROMPT,
+            model="claude-opus-4-7",
+            max_tokens=8192,
+            thinking={"type": "adaptive"},
+            output_config={"effort": "high"},
+            system=[
+                {
+                    "type": "text",
+                    "text": SYSTEM_PROMPT,
+                    "cache_control": {"type": "ephemeral"},
+                }
+            ],
             messages=[{"role": "user", "content": policy}],
         )
     except anthropic.AuthenticationError:
@@ -296,7 +304,7 @@ def evaluate():
         app.logger.error(f"Unexpected Anthropic API error: {type(e).__name__}: {e}")
         return jsonify({"error": "Something went wrong. Please try again."}), 502
 
-    raw = message.content[0].text
+    raw = next(b.text for b in message.content if b.type == "text")
 
     try:
         result = json.loads(raw)
