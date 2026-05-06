@@ -1,6 +1,7 @@
 import json
 import os
 import pathlib
+import re
 import threading
 import urllib.error
 import urllib.request
@@ -330,10 +331,15 @@ def evaluate():
     try:
         result = json.loads(raw)
     except json.JSONDecodeError:
-        threading.Thread(
-            target=log_submission, args=(email, policy, ""), daemon=True
-        ).start()
-        return jsonify({"raw_response": raw, "parse_error": True})
+        # Opus 4.7 occasionally emits trailing commas before } or ]
+        cleaned = re.sub(r",(\s*[}\]])", r"\1", raw)
+        try:
+            result = json.loads(cleaned)
+        except json.JSONDecodeError:
+            threading.Thread(
+                target=log_submission, args=(email, policy, ""), daemon=True
+            ).start()
+            return jsonify({"raw_response": raw, "parse_error": True})
 
     threading.Thread(
         target=log_submission,
