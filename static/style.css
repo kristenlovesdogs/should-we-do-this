@@ -80,6 +80,35 @@ textarea:focus {
     box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.12);
 }
 
+input[type="email"] {
+    width: 100%;
+    padding: 0.75rem 0.875rem;
+    margin-top: 0.25rem;
+    font-size: 1rem;
+    font-family: inherit;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background: #fff;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+
+input[type="email"]:focus {
+    outline: none;
+    border-color: #1a73e8;
+    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.12);
+}
+
+label[for="email-input"] {
+    margin-top: 1rem;
+}
+
+.email-note {
+    margin-top: 0.35rem;
+    margin-bottom: 0;
+    text-align: left;
+}
+
 button[type="submit"] {
     display: block;
     width: 100%;

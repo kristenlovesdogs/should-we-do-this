@@ -1,6 +1,9 @@
 import json
 import os
 import pathlib
+import threading
+import urllib.error
+import urllib.request
 import uuid
 
 import anthropic
@@ -18,6 +21,23 @@ SHARES_DIR.mkdir(parents=True, exist_ok=True)
 
 def get_client():
     return Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+
+
+def log_submission(email: str, policy: str, verdict: str) -> None:
+    webhook_url = os.environ.get("GOOGLE_SHEETS_WEBHOOK_URL")
+    if not webhook_url:
+        return
+    payload = json.dumps({"email": email, "policy": policy, "verdict": verdict}).encode("utf-8")
+    req = urllib.request.Request(
+        webhook_url,
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        urllib.request.urlopen(req, timeout=5).read()
+    except (urllib.error.URLError, TimeoutError) as e:
+        app.logger.warning(f"Sheet logging failed: {e}")
 
 SYSTEM_PROMPT = """\
 You are an expert animal shelter policy analyst. Your role is to evaluate proposed \
@@ -273,6 +293,7 @@ def evaluate():
         return jsonify({"error": "Invalid request."}), 400
 
     policy = data.get("policy", "").strip()
+    email = data.get("email", "").strip()
     if len(policy) < 10:
         return jsonify({"error": "Please describe the policy in more detail (at least a sentence or two)."}), 400
 
@@ -309,8 +330,16 @@ def evaluate():
     try:
         result = json.loads(raw)
     except json.JSONDecodeError:
+        threading.Thread(
+            target=log_submission, args=(email, policy, ""), daemon=True
+        ).start()
         return jsonify({"raw_response": raw, "parse_error": True})
 
+    threading.Thread(
+        target=log_submission,
+        args=(email, policy, result.get("verdict", "")),
+        daemon=True,
+    ).start()
     return jsonify(result)
 
 

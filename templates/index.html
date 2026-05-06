@@ -24,6 +24,15 @@
                 placeholder="Example: We want to require adopters to provide two personal references and a letter from their veterinarian before being approved to adopt."
                 required
             ></textarea>
+            <label for="email-input">Your email (optional):</label>
+            <input
+                type="email"
+                id="email-input"
+                name="email"
+                placeholder="you@example.com"
+                autocomplete="email"
+            />
+            <p class="form-note email-note">Optional. We log it to understand who's using this tool.</p>
             <button type="submit" id="submit-btn">Evaluate This Policy</button>
             <p class="form-note">Evaluated using AI and current animal welfare research. This tool provides guidance, not definitive answers.</p>
         </form>

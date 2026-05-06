@@ -1,6 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {
     var form = document.getElementById("evaluate-form");
     var input = document.getElementById("policy-input");
+    var emailInput = document.getElementById("email-input");
     var submitBtn = document.getElementById("submit-btn");
     var loading = document.getElementById("loading");
     var loadingText = document.getElementById("loading-text");
@@ -129,6 +130,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         var policy = input.value.trim();
         if (!policy) return;
+        var email = emailInput ? emailInput.value.trim() : "";
 
         // Reset UI
         results.classList.add("hidden");
@@ -143,7 +145,7 @@ document.addEventListener("DOMContentLoaded", function () {
         fetch("/evaluate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ policy: policy }),
+            body: JSON.stringify({ policy: policy, email: email }),
         })
             .then(function (response) {
                 return response.json().then(function (data) {
