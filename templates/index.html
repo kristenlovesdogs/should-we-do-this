@@ -3,139 +3,204 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Should We Do This?</title>
+    <title>Should We Do This? | An evidence check for shelter policy</title>
+    <meta name="description" content="Describe a proposed shelter policy and get an evidence-based read on how it would affect adoptions, length of stay, and live outcomes.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Mulish:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <header>
-        <h1>Should We Do This?</h1>
-        <p class="subtitle">An evidence-based policy checker for animal shelters</p>
-        <p class="description">Enter a proposed rule, policy, or procedure and get an analysis of how it might affect adoption rates and animal outcomes.</p>
-        <p class="credit">Created by Kristen Hassen, Outcomes Consulting</p>
+
+<div class="page">
+
+    <header class="site-header">
+        <a class="brand" href="https://www.outcomesforpets.com" target="_blank" rel="noopener noreferrer">
+            <img src="/static/logo.svg" alt="Outcomes Consulting" class="brand-logo">
+        </a>
     </header>
 
     <main>
-        <form id="evaluate-form">
-            <label for="policy-input">Describe the proposed policy:</label>
-            <textarea
-                id="policy-input"
-                name="policy"
-                rows="5"
-                placeholder="Example: We want to require adopters to provide two personal references and a letter from their veterinarian before being approved to adopt."
-                required
-            ></textarea>
-            <label for="email-input">Your email (optional):</label>
-            <input
-                type="email"
-                id="email-input"
-                name="email"
-                placeholder="you@example.com"
-                autocomplete="email"
-            />
-            <p class="form-note email-note">Optional. We log it to understand who's using this tool.</p>
-            <button type="submit" id="submit-btn">Evaluate This Policy</button>
-            <p class="form-note">Evaluated using AI and current animal welfare research. This tool provides guidance, not definitive answers.</p>
+
+        <section class="hero">
+            <h1>Should We Do This?</h1>
+            <p class="hero-lede">An evidence check for animal shelter policy.</p>
+            <p class="hero-body">
+                Describe a rule, policy, or procedure you are considering. You will get an
+                honest read on what the research says, how it is likely to affect adoptions,
+                length of stay, and live outcomes, and what to do instead if it is going to
+                cause harm.
+            </p>
+        </section>
+
+        <div id="expired-banner" class="notice notice-warning hidden">
+            <p><strong>This shared link has expired.</strong> Older share links were stored temporarily and are no longer available. New share links never expire. You can run the analysis again below.</p>
+        </div>
+
+        <div id="shared-banner" class="notice notice-info hidden">
+            <p>You are viewing a shared analysis. <a href="/">Evaluate your own policy</a></p>
+        </div>
+
+        <form id="evaluate-form" class="card form-card">
+            <div class="field">
+                <label for="policy-input">Describe the proposed policy</label>
+                <textarea
+                    id="policy-input"
+                    name="policy"
+                    rows="5"
+                    placeholder="Example: We want to require adopters to provide two personal references and a letter from their veterinarian before being approved to adopt."
+                    required
+                ></textarea>
+            </div>
+
+            <div class="examples">
+                <span class="examples-label">Or try one of these:</span>
+                <div class="example-chips">
+                    <button type="button" class="chip" data-example="We want to require every adopter to provide a landlord's written permission and proof of a fenced yard before they can adopt a dog.">Landlord letter and fenced yard</button>
+                    <button type="button" class="chip" data-example="We want to charge a $75 reclaim fee for any stray dog picked up by our field officers, with the fee doubling for a second impoundment.">Escalating reclaim fees</button>
+                    <button type="button" class="chip" data-example="We want to move to appointment-only owner surrender, with the next available appointment typically two to three weeks out.">Appointment-only surrender</button>
+                    <button type="button" class="chip" data-example="We want to start sending shelter dogs home with volunteers for one-night sleepovers on weekends.">Weekend dog sleepovers</button>
+                </div>
+            </div>
+
+            <details class="field email-field">
+                <summary>Add your email (optional)</summary>
+                <input
+                    type="email"
+                    id="email-input"
+                    name="email"
+                    placeholder="you@example.com"
+                    autocomplete="email"
+                />
+                <p class="form-note">Optional. We log it to understand who is using this tool.</p>
+            </details>
+
+            <button type="submit" id="submit-btn" class="btn btn-primary">Evaluate this policy</button>
+            <p class="form-note form-disclaimer">Evaluated using AI and published animal welfare research. This tool offers guidance, not definitive answers.</p>
         </form>
 
         <div id="loading" class="loading hidden">
-            <div class="spinner"></div>
+            <div class="spinner" aria-hidden="true"></div>
             <p id="loading-text">Sniffing out the research on this one...</p>
+            <p class="loading-sub">A careful analysis usually takes about a minute.</p>
         </div>
 
-        <div id="error" class="error-message hidden"></div>
+        <div id="error" class="notice notice-error hidden"></div>
 
-        <div id="clarification" class="clarification hidden">
+        <section id="clarification" class="card clarification hidden">
             <h2>Can you be more specific?</h2>
-            <p id="clarification-message"></p>
+            <p id="clarification-message" class="clarification-message"></p>
             <div class="clarification-questions">
-                <h3>A few questions to help narrow it down:</h3>
+                <h3>A few questions to help narrow it down</h3>
                 <ul id="clarification-questions-list"></ul>
             </div>
             <div class="clarification-suggestion">
                 <h3>Did you mean something like this?</h3>
                 <p class="edit-hint">Edit below if needed, then evaluate.</p>
                 <textarea id="clarification-rewrite" class="suggested-rewrite" rows="4"></textarea>
-                <button type="button" id="use-suggestion-btn" class="use-suggestion-btn">Evaluate This</button>
+                <button type="button" id="use-suggestion-btn" class="btn btn-primary">Evaluate this</button>
             </div>
-        </div>
+        </section>
 
-        <div id="shared-banner" class="shared-banner hidden">
-            <p>You're viewing a shared policy analysis. <a href="/">Evaluate your own policy</a></p>
-        </div>
+        <section id="results" class="results hidden">
 
-        <div id="results" class="hidden">
+            <div id="print-header" class="print-only">
+                <h1>Should We Do This?</h1>
+                <p class="print-policy-label">Proposed policy</p>
+                <p id="print-policy-text" class="print-policy-text"></p>
+            </div>
+
             <div id="verdict" class="verdict">
+                <span class="verdict-eyebrow">The verdict</span>
                 <h2 id="verdict-label"></h2>
                 <p id="verdict-summary"></p>
             </div>
 
             <div class="analysis-grid">
-                <div class="card" id="card-adoption">
-                    <h3>Adoption Impact <span class="badge" id="badge-adoption"></span></h3>
+                <div class="card analysis-card" id="card-adoption">
+                    <div class="analysis-head">
+                        <h3>Adoption impact</h3>
+                        <span class="badge" id="badge-adoption"></span>
+                    </div>
                     <p id="text-adoption"></p>
                 </div>
-                <div class="card" id="card-los">
-                    <h3>Length of Stay <span class="badge" id="badge-los"></span></h3>
+                <div class="card analysis-card" id="card-los">
+                    <div class="analysis-head">
+                        <h3>Length of stay</h3>
+                        <span class="badge" id="badge-los"></span>
+                    </div>
                     <p id="text-los"></p>
                 </div>
-                <div class="card" id="card-save">
-                    <h3>Save Rate <span class="badge" id="badge-save"></span></h3>
+                <div class="card analysis-card" id="card-save">
+                    <div class="analysis-head">
+                        <h3>Save rate</h3>
+                        <span class="badge" id="badge-save"></span>
+                    </div>
                     <p id="text-save"></p>
                 </div>
-                <div class="card" id="card-evidence">
-                    <h3>Evidence Basis <span class="badge" id="badge-evidence"></span></h3>
+                <div class="card analysis-card" id="card-evidence">
+                    <div class="analysis-head">
+                        <h3>Evidence basis</h3>
+                        <span class="badge" id="badge-evidence"></span>
+                    </div>
                     <p id="text-evidence"></p>
                 </div>
             </div>
 
             <section class="list-section" id="consequences-section">
-                <h3>Unintended Consequences</h3>
-                <ul id="consequences-list"></ul>
+                <h3><span class="section-rule" aria-hidden="true"></span>Unintended consequences</h3>
+                <ul id="consequences-list" class="marker-list marker-warn"></ul>
             </section>
 
             <section class="list-section" id="alternatives-section">
-                <h3>Alternatives to Consider</h3>
-                <ul id="alternatives-list"></ul>
+                <h3><span class="section-rule" aria-hidden="true"></span>Alternatives to consider</h3>
+                <ul id="alternatives-list" class="marker-list marker-good"></ul>
             </section>
 
             <section class="bottom-line-section">
-                <h3>The Bottom Line</h3>
                 <div class="bottom-line-box">
+                    <h3>The bottom line</h3>
                     <p id="bottom-line"></p>
                 </div>
             </section>
 
             <section class="sources-section" id="sources-section">
-                <h3>Sources</h3>
+                <h3><span class="section-rule" aria-hidden="true"></span>Sources</h3>
                 <ol id="sources-list"></ol>
             </section>
 
-            <div class="print-bar">
-                <button type="button" id="share-btn" class="share-btn">Copy Share Link</button>
-                <button type="button" id="print-btn" class="print-btn">Print / Save as PDF</button>
+            <div class="action-bar">
+                <button type="button" id="share-btn" class="btn btn-secondary">Copy share link</button>
+                <button type="button" id="print-btn" class="btn btn-secondary">Print or save as PDF</button>
+                <button type="button" id="restart-btn" class="btn btn-ghost">Evaluate another policy</button>
             </div>
 
-            <div id="print-header" class="print-only">
-                <h1>Should We Do This?</h1>
-                <p class="print-policy-label">Proposed Policy:</p>
-                <p id="print-policy-text" class="print-policy-text"></p>
-            </div>
-        </div>
+        </section>
 
-        <div id="raw-fallback" class="hidden">
+        <div id="raw-fallback" class="card hidden">
             <h3>Analysis</h3>
             <pre id="raw-text"></pre>
         </div>
+
     </main>
 
-    <footer>
-        <p>This tool uses AI to provide guidance based on published animal welfare research. It is not a substitute for professional judgment, community context, or legal advice.</p>
-        <p class="beta-notice">This app is currently in beta. We'd love your feedback — email us at <a href="mailto:kristen@outcomesforpets.com">kristen@outcomesforpets.com</a>.</p>
+    <footer class="site-footer">
+        <p>
+            This tool uses AI to provide guidance based on published animal welfare research.
+            It is not a substitute for professional judgment, community context, or legal advice.
+        </p>
+        <p>
+            Created by Kristen Hassen, <a href="https://www.outcomesforpets.com" target="_blank" rel="noopener noreferrer">Outcomes Consulting</a>.
+            We would love your feedback at
+            <a href="mailto:kristen@outcomesforpets.com">kristen@outcomesforpets.com</a>.
+        </p>
     </footer>
 
-    {% if share_data %}
-    <script>window.SHARE_DATA = {{ share_data | tojson }};</script>
-    {% endif %}
-    <script src="/static/app.js"></script>
+</div>
+
+{% if expired_share %}
+<script>window.EXPIRED_SHARE = true;</script>
+{% endif %}
+<script src="/static/app.js"></script>
 </body>
 </html>

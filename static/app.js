@@ -9,12 +9,13 @@ document.addEventListener("DOMContentLoaded", function () {
     var results = document.getElementById("results");
     var clarification = document.getElementById("clarification");
     var rawFallback = document.getElementById("raw-fallback");
+    var shareBtn = document.getElementById("share-btn");
 
     var loadingMessages = [
         "Sniffing out the research on this one...",
         "Fetching the evidence...",
         "Digging through the data...",
-        "Good policy? Sit. Stay. We\u2019re checking...",
+        "Good policy? Sit. Stay. We’re checking...",
         "Retrieving the latest studies...",
         "On the scent of the research...",
         "Tail-wagging analysis incoming...",
@@ -24,6 +25,61 @@ document.addEventListener("DOMContentLoaded", function () {
     ];
     var loadingInterval = null;
     var lastResultData = null;
+    var currentSources = [];
+
+    /* ------------------------------------------------------------------
+       Share encoding: the whole analysis rides in the URL fragment, so
+       there is nothing to store server-side and links never expire.
+       ------------------------------------------------------------------ */
+
+    function bytesToBase64Url(bytes) {
+        var binary = "";
+        var chunk = 0x8000;
+        for (var i = 0; i < bytes.length; i += chunk) {
+            binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+        }
+        return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    }
+
+    function base64UrlToBytes(str) {
+        var padded = str.replace(/-/g, "+").replace(/_/g, "/");
+        while (padded.length % 4) padded += "=";
+        var binary = atob(padded);
+        var out = new Uint8Array(binary.length);
+        for (var i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
+        return out;
+    }
+
+    function encodeShare(payload) {
+        var bytes = new TextEncoder().encode(JSON.stringify(payload));
+        if (typeof CompressionStream === "undefined") {
+            return Promise.resolve("j" + bytesToBase64Url(bytes));
+        }
+        var stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream("deflate-raw"));
+        return new Response(stream).arrayBuffer()
+            .then(function (buf) { return "z" + bytesToBase64Url(new Uint8Array(buf)); })
+            .catch(function () { return "j" + bytesToBase64Url(bytes); });
+    }
+
+    function decodeShare(str) {
+        var flag = str.charAt(0);
+        var bytes = base64UrlToBytes(str.slice(1));
+        if (flag === "j") {
+            return Promise.resolve(JSON.parse(new TextDecoder().decode(bytes)));
+        }
+        if (flag !== "z") return Promise.reject(new Error("Unrecognized share format"));
+        if (typeof DecompressionStream === "undefined") {
+            return Promise.reject(new Error("This browser cannot read compressed share links"));
+        }
+        var stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+        return new Response(stream).arrayBuffer().then(function (buf) {
+            return JSON.parse(new TextDecoder().decode(new Uint8Array(buf)));
+        });
+    }
+
+    /* ------------------------------------------------------------------
+       Loading messages
+       ------------------------------------------------------------------ */
 
     function startLoadingMessages() {
         var index = 0;
@@ -41,81 +97,116 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    // Share button
-    document.getElementById("share-btn").addEventListener("click", function () {
+    /* ------------------------------------------------------------------
+       Share button
+       ------------------------------------------------------------------ */
+
+    shareBtn.addEventListener("click", function () {
         if (!lastResultData) return;
 
-        var shareBtn = document.getElementById("share-btn");
-        var policy = input.value.trim();
-
+        var original = "Copy share link";
         shareBtn.disabled = true;
-        shareBtn.textContent = "Saving...";
+        shareBtn.textContent = "Building link...";
 
-        fetch("/share", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ policy: policy, results: lastResultData }),
-        })
-            .then(function (response) {
-                return response.json();
-            })
-            .then(function (data) {
-                if (data.id) {
-                    var url = window.location.origin + "/s/" + data.id;
-                    var copied = false;
-                    function onCopied() {
-                        if (copied) return;
-                        copied = true;
-                        shareBtn.textContent = "Link copied!";
-                        setTimeout(function () {
-                            shareBtn.disabled = false;
-                            shareBtn.textContent = "Copy Share Link";
-                        }, 2000);
-                    }
-                    function onFallback() {
-                        if (copied) return;
-                        copied = true;
-                        window.prompt("Copy this link:", url);
+        encodeShare({ p: input.value.trim(), r: lastResultData })
+            .then(function (encoded) {
+                var url = window.location.origin + "/#s=" + encoded;
+                var settled = false;
+
+                function done(label) {
+                    if (settled) return;
+                    settled = true;
+                    shareBtn.textContent = label;
+                    setTimeout(function () {
                         shareBtn.disabled = false;
-                        shareBtn.textContent = "Copy Share Link";
-                    }
-                    try {
-                        navigator.clipboard.writeText(url).then(onCopied).catch(onFallback);
-                        // Safety timeout in case clipboard promise hangs
-                        setTimeout(function () { if (!copied) onFallback(); }, 2000);
-                    } catch (e) {
-                        onFallback();
-                    }
-                } else {
+                        shareBtn.textContent = original;
+                    }, 2200);
+                }
+
+                function fallback() {
+                    if (settled) return;
+                    settled = true;
+                    window.prompt("Copy this link:", url);
                     shareBtn.disabled = false;
-                    shareBtn.textContent = "Copy Share Link";
+                    shareBtn.textContent = original;
+                }
+
+                try {
+                    navigator.clipboard.writeText(url)
+                        .then(function () { done("Link copied"); })
+                        .catch(fallback);
+                    setTimeout(function () { if (!settled) fallback(); }, 2000);
+                } catch (e) {
+                    fallback();
                 }
             })
             .catch(function () {
                 shareBtn.disabled = false;
-                shareBtn.textContent = "Copy Share Link";
+                shareBtn.textContent = original;
+                showError("Could not build a share link for this analysis.");
             });
     });
 
-    // Check for shared data on page load
-    if (window.SHARE_DATA) {
-        var shared = window.SHARE_DATA;
-        input.value = shared.policy || "";
-        form.style.display = "none";
-        document.getElementById("shared-banner").classList.remove("hidden");
+    /* ------------------------------------------------------------------
+       Load a shared analysis from the URL fragment
+       ------------------------------------------------------------------ */
 
-        if (shared.results) {
-            if (shared.results.clarification_needed) {
-                renderClarification(shared.results);
-            } else {
-                renderResults(shared.results);
-            }
-        }
+    function enterSharedMode(policy) {
+        input.value = policy || "";
+        form.classList.add("hidden");
+        document.getElementById("shared-banner").classList.remove("hidden");
     }
 
+    if (window.EXPIRED_SHARE) {
+        document.getElementById("expired-banner").classList.remove("hidden");
+    }
+
+    var loadedHash = null;
+
+    function loadFromHash() {
+        var hash = window.location.hash || "";
+        if (hash.indexOf("#s=") !== 0 || hash === loadedHash) return;
+        loadedHash = hash;
+
+        decodeShare(hash.slice(3))
+            .then(function (shared) {
+                if (!shared || typeof shared !== "object" || !shared.r) {
+                    throw new Error("Empty share payload");
+                }
+                errorDiv.classList.add("hidden");
+                enterSharedMode(shared.p);
+                if (shared.r.clarification_needed) {
+                    results.classList.add("hidden");
+                    renderClarification(shared.r);
+                } else {
+                    clarification.classList.add("hidden");
+                    renderResults(shared.r);
+                }
+            })
+            .catch(function () {
+                showError("This share link could not be read. It may have been truncated in transit. You can run the analysis again below.");
+            });
+    }
+
+    // Covers both a cold load and a share link pasted into an already-open tab,
+    // where only the fragment changes and the page never reloads.
+    loadFromHash();
+    window.addEventListener("hashchange", loadFromHash);
+
+    /* ------------------------------------------------------------------
+       Form interactions
+       ------------------------------------------------------------------ */
+
+    Array.prototype.forEach.call(document.querySelectorAll(".chip"), function (chip) {
+        chip.addEventListener("click", function () {
+            input.value = chip.getAttribute("data-example") || "";
+            input.focus();
+            input.setSelectionRange(input.value.length, input.value.length);
+        });
+    });
+
     document.getElementById("use-suggestion-btn").addEventListener("click", function () {
-        var rewrite = document.getElementById("clarification-rewrite").value.trim();
-        input.value = rewrite;
+        input.value = document.getElementById("clarification-rewrite").value.trim();
         clarification.classList.add("hidden");
         form.dispatchEvent(new Event("submit"));
     });
@@ -125,6 +216,10 @@ document.addEventListener("DOMContentLoaded", function () {
         window.print();
     });
 
+    document.getElementById("restart-btn").addEventListener("click", function () {
+        window.location.href = window.location.origin + "/";
+    });
+
     form.addEventListener("submit", function (e) {
         e.preventDefault();
 
@@ -132,7 +227,6 @@ document.addEventListener("DOMContentLoaded", function () {
         if (!policy) return;
         var email = emailInput ? emailInput.value.trim() : "";
 
-        // Reset UI
         results.classList.add("hidden");
         clarification.classList.add("hidden");
         rawFallback.classList.add("hidden");
@@ -153,40 +247,39 @@ document.addEventListener("DOMContentLoaded", function () {
                 });
             })
             .then(function (result) {
-                stopLoadingMessages();
-                loading.classList.add("hidden");
-                submitBtn.disabled = false;
-                submitBtn.textContent = "Evaluate This Policy";
+                resetForm();
 
                 if (!result.ok) {
                     showError(result.data.error || "Something went wrong. Please try again.");
                     return;
                 }
-
                 if (result.data.parse_error) {
                     showRaw(result.data.raw_response);
                     return;
                 }
-
                 if (result.data.clarification_needed) {
                     renderClarification(result.data);
                     return;
                 }
-
                 renderResults(result.data);
             })
             .catch(function () {
-                stopLoadingMessages();
-                loading.classList.add("hidden");
-                submitBtn.disabled = false;
-                submitBtn.textContent = "Evaluate This Policy";
+                resetForm();
                 showError("Could not connect to the server. Make sure the app is running.");
             });
     });
 
+    function resetForm() {
+        stopLoadingMessages();
+        loading.classList.add("hidden");
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Evaluate this policy";
+    }
+
     function showError(message) {
         errorDiv.textContent = message;
         errorDiv.classList.remove("hidden");
+        errorDiv.scrollIntoView({ behavior: "smooth", block: "center" });
     }
 
     function showRaw(text) {
@@ -194,117 +287,125 @@ document.addEventListener("DOMContentLoaded", function () {
         rawFallback.classList.remove("hidden");
     }
 
+    /* ------------------------------------------------------------------
+       Rendering
+       ------------------------------------------------------------------ */
+
+    function escapeHtml(str) {
+        return String(str == null ? "" : str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+    }
+
+    function getSourceUrl(source) {
+        if (!source) return null;
+        if (source.url && /^https?:\/\//i.test(source.url)) return source.url;
+        var query = encodeURIComponent((source.title || "") + " " + (source.author || ""));
+        return "https://scholar.google.com/scholar?q=" + query;
+    }
+
+    // Escapes first, then turns [1] / [1][2] into linked badges. Everything
+    // rendered here can come from a share link, so it is treated as untrusted.
+    function withCitations(text) {
+        return escapeHtml(text).replace(/(\[\d+\](?:\s*\[\d+\])*)/g, function (match) {
+            var badges = match.match(/\[(\d+)\]/g).map(function (n) {
+                var num = n.replace(/[\[\]]/g, "");
+                var source = currentSources.filter(function (s) {
+                    return String(s && s.id) === num;
+                })[0];
+                var tooltip = source ? (source.title || "") + " — " + (source.author || "") : "Source " + num;
+                var url = getSourceUrl(source);
+                if (source && url) {
+                    return '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer" ' +
+                        'class="citation-badge" title="' + escapeHtml(tooltip) + '">' + escapeHtml(num) + '</a>';
+                }
+                return '<span class="citation-badge" title="' + escapeHtml(tooltip) + '">' + escapeHtml(num) + '</span>';
+            });
+            return '<span class="citation-cluster">' + badges.join("") + "</span>";
+        });
+    }
+
     function renderClarification(data) {
         document.getElementById("clarification-message").textContent = data.message || "";
-        populateList("clarification-questions-list", data.questions);
+        var list = document.getElementById("clarification-questions-list");
+        list.innerHTML = "";
+        (data.questions || []).forEach(function (q) {
+            var li = document.createElement("li");
+            li.textContent = q;
+            list.appendChild(li);
+        });
         document.getElementById("clarification-rewrite").value = data.suggested_rewrite || "";
         clarification.classList.remove("hidden");
         clarification.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
-    var currentSources = [];
-
     function renderResults(data) {
-        // Store for sharing
         lastResultData = data;
+        currentSources = Array.isArray(data.sources) ? data.sources : [];
 
-        // Store sources for citation tooltips
-        currentSources = data.sources || [];
-
-        // Verdict
         var verdictEl = document.getElementById("verdict");
         var verdictLabel = document.getElementById("verdict-label");
-        var verdictSummary = document.getElementById("verdict-summary");
 
         verdictEl.className = "verdict";
         if (data.verdict === "Green light") {
             verdictEl.classList.add("green");
-            verdictLabel.textContent = "\u2705 Green Light";
+            verdictLabel.textContent = "✅ Green light";
         } else if (data.verdict === "Proceed with caution") {
             verdictEl.classList.add("caution");
-            verdictLabel.textContent = "\u26A0\uFE0F Proceed with Caution";
+            verdictLabel.textContent = "⚠️ Proceed with caution";
         } else {
             verdictEl.classList.add("reconsider");
-            verdictLabel.textContent = "\u274C Reconsider";
+            verdictLabel.textContent = "❌ Reconsider";
         }
-        verdictSummary.textContent = data.verdict_summary || "";
+        document.getElementById("verdict-summary").textContent = data.verdict_summary || "";
 
-        // Analysis cards
         var analysis = data.analysis || {};
-
         setCard("adoption", analysis.adoption_impact);
         setCard("los", analysis.length_of_stay_impact);
         setCard("save", analysis.save_rate_impact);
-        setCardEvidence("evidence", analysis.evidence_basis);
+        setCard("evidence", analysis.evidence_basis);
 
-        // Lists
         populateList("consequences-list", analysis.unintended_consequences);
         populateList("alternatives-list", analysis.alternatives);
+        toggleSection("consequences-section", analysis.unintended_consequences);
+        toggleSection("alternatives-section", analysis.alternatives);
 
-        // Bottom line
         document.getElementById("bottom-line").textContent = data.bottom_line || "";
 
-        // Sources
         renderSources(currentSources);
 
         results.classList.remove("hidden");
         results.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
-    function getSourceUrl(source) {
-        if (source && source.url) return source.url;
-        if (!source) return null;
-        var query = encodeURIComponent(source.title + " " + source.author);
-        return "https://scholar.google.com/scholar?q=" + query;
-    }
-
-    function injectCitations(text) {
-        // Replace [1], [2], etc. with styled citation badges
-        // Group adjacent citations like [1][2] into a single cluster
-        return text.replace(/(\[\d+\](?:\s*\[\d+\])*)/g, function (match) {
-            var nums = match.match(/\[(\d+)\]/g);
-            var badges = nums.map(function (n) {
-                var num = n.replace(/[\[\]]/g, "");
-                var source = currentSources.find(function (s) { return String(s.id) === num; });
-                var tooltip = source ? source.title + " — " + source.author : "Source " + num;
-                var url = getSourceUrl(source);
-                if (url) {
-                    return '<a href="' + url.replace(/"/g, '&quot;') + '" target="_blank" rel="noopener noreferrer" class="citation-badge" data-source="' + num + '" title="' + tooltip.replace(/"/g, '&quot;') + '">' + num + '</a>';
-                }
-                return '<span class="citation-badge" data-source="' + num + '" title="' + tooltip.replace(/"/g, '&quot;') + '">' + num + '</span>';
-            });
-            return '<span class="citation-cluster">' + badges.join("") + '</span>';
-        });
-    }
-
     function setCard(id, data) {
-        if (!data) return;
+        var card = document.getElementById("card-" + id);
+        if (!data) {
+            if (card) card.classList.add("hidden");
+            return;
+        }
+        if (card) card.classList.remove("hidden");
         var badge = document.getElementById("badge-" + id);
-        var text = document.getElementById("text-" + id);
-
-        badge.textContent = data.rating;
-        badge.className = "badge " + data.rating;
-        text.innerHTML = injectCitations(data.explanation || "");
+        badge.textContent = data.rating || "";
+        badge.className = "badge " + (data.rating || "");
+        document.getElementById("text-" + id).innerHTML = withCitations(data.explanation || "");
     }
 
-    function setCardEvidence(id, data) {
-        if (!data) return;
-        var badge = document.getElementById("badge-" + id);
-        var text = document.getElementById("text-" + id);
-
-        badge.textContent = data.rating;
-        badge.className = "badge " + data.rating;
-        text.innerHTML = injectCitations(data.explanation || "");
+    function toggleSection(sectionId, items) {
+        var section = document.getElementById(sectionId);
+        if (!section) return;
+        section.style.display = items && items.length ? "" : "none";
     }
 
     function populateList(listId, items) {
         var list = document.getElementById(listId);
         list.innerHTML = "";
-        if (!items || !items.length) return;
-
-        items.forEach(function (item) {
+        (items || []).forEach(function (item) {
             var li = document.createElement("li");
-            li.innerHTML = injectCitations(item);
+            li.innerHTML = withCitations(item);
             list.appendChild(li);
         });
     }
@@ -314,31 +415,34 @@ document.addEventListener("DOMContentLoaded", function () {
         var list = document.getElementById("sources-list");
         list.innerHTML = "";
 
-        if (!sources || !sources.length) {
+        if (!sources.length) {
             section.style.display = "none";
             return;
         }
-
         section.style.display = "";
+
         sources.forEach(function (source) {
             var li = document.createElement("li");
-            li.id = "source-" + source.id;
             var url = getSourceUrl(source);
-            var titleHtml;
+            var title;
             if (url) {
-                titleHtml = '<a href="' + url.replace(/"/g, '&quot;') + '" target="_blank" rel="noopener noreferrer" class="source-title">' + escapeHtml(source.title) + '</a>';
+                title = document.createElement("a");
+                title.href = url;
+                title.target = "_blank";
+                title.rel = "noopener noreferrer";
             } else {
-                titleHtml = '<span class="source-title">' + escapeHtml(source.title) + '</span>';
+                title = document.createElement("span");
             }
-            li.innerHTML = titleHtml +
-                '<span class="source-author">' + escapeHtml(source.author) + '</span>';
+            title.className = "source-title";
+            title.textContent = source.title || "Untitled source";
+
+            var author = document.createElement("span");
+            author.className = "source-author";
+            author.textContent = source.author || "";
+
+            li.appendChild(title);
+            li.appendChild(author);
             list.appendChild(li);
         });
-    }
-
-    function escapeHtml(str) {
-        var div = document.createElement("div");
-        div.textContent = str || "";
-        return div.innerHTML;
     }
 });
