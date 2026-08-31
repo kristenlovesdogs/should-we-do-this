@@ -2,13 +2,14 @@ import json
 import os
 import re
 import threading
+import time
 import urllib.error
 import urllib.request
 
 import anthropic
 from anthropic import Anthropic
 from dotenv import load_dotenv
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, Response, jsonify, render_template, request, stream_with_context
 
 load_dotenv(override=True)
 
@@ -426,6 +427,10 @@ def shared(share_id):
     return render_template("index.html", expired_share=True)
 
 
+def sse(event, payload):
+    return f"event: {event}\ndata: {json.dumps(payload)}\n\n"
+
+
 @app.route("/evaluate", methods=["POST"])
 def evaluate():
     data = request.get_json()
@@ -437,61 +442,87 @@ def evaluate():
     if len(policy) < 10:
         return jsonify({"error": "Please describe the policy in more detail (at least a sentence or two)."}), 400
 
-    try:
-        client = get_client()
-        # Streamed so a long, high-effort analysis cannot trip the SDK's HTTP timeout.
-        with client.messages.stream(
-            model=MODEL,
-            max_tokens=16000,
-            thinking={"type": "adaptive"},
-            output_config={"effort": "high"},
-            system=[
-                {
-                    "type": "text",
-                    "text": SYSTEM_PROMPT,
-                    "cache_control": {"type": "ephemeral"},
-                }
-            ],
-            messages=[{"role": "user", "content": policy}],
-        ) as stream:
-            message = stream.get_final_message()
-    except anthropic.AuthenticationError:
-        app.logger.error("Anthropic API authentication failed — check ANTHROPIC_API_KEY")
-        return jsonify({"error": "The AI service is temporarily unavailable. We're working on it!"}), 502
-    except anthropic.RateLimitError:
-        return jsonify({"error": "We're getting a lot of traffic right now. Please wait a moment and try again."}), 429
-    except anthropic.APIConnectionError:
-        app.logger.error("Could not connect to Anthropic API")
-        return jsonify({"error": "Could not connect to the AI service. Please try again in a moment."}), 502
-    except Exception as e:
-        app.logger.error(f"Unexpected Anthropic API error: {type(e).__name__}: {e}")
-        return jsonify({"error": "Something went wrong. Please try again."}), 502
+    def generate():
+        # Headers flush on this first byte. A silent 60+ second request gets cut
+        # by the proxy chain in front of the app, so the connection must never
+        # go quiet: keepalive comments go out while the model is still working.
+        yield ": connected\n\n"
 
-    if message.stop_reason == "refusal":
-        app.logger.warning("Model declined the request")
-        return jsonify({"error": "This request could not be analyzed. Try rephrasing the policy."}), 400
-
-    raw = next((b.text for b in message.content if b.type == "text"), "")
-
-    try:
-        result = json.loads(raw)
-    except json.JSONDecodeError:
-        # The model occasionally emits trailing commas before } or ]
-        cleaned = re.sub(r",(\s*[}\]])", r"\1", raw)
         try:
-            result = json.loads(cleaned)
-        except json.JSONDecodeError:
-            threading.Thread(
-                target=log_submission, args=(email, policy, ""), daemon=True
-            ).start()
-            return jsonify({"raw_response": raw, "parse_error": True})
+            client = get_client()
+            with client.messages.stream(
+                model=MODEL,
+                max_tokens=16000,
+                thinking={"type": "adaptive"},
+                output_config={"effort": "high"},
+                system=[
+                    {
+                        "type": "text",
+                        "text": SYSTEM_PROMPT,
+                        "cache_control": {"type": "ephemeral"},
+                    }
+                ],
+                messages=[{"role": "user", "content": policy}],
+            ) as stream:
+                last_ping = time.monotonic()
+                for _ in stream:
+                    now = time.monotonic()
+                    if now - last_ping >= 2:
+                        last_ping = now
+                        yield ": working\n\n"
+                message = stream.get_final_message()
+        except anthropic.AuthenticationError:
+            app.logger.error("Anthropic API authentication failed, check ANTHROPIC_API_KEY")
+            yield sse("error", {"error": "The AI service is temporarily unavailable. We're working on it!"})
+            return
+        except anthropic.RateLimitError:
+            yield sse("error", {"error": "We're getting a lot of traffic right now. Please wait a moment and try again."})
+            return
+        except anthropic.APIConnectionError:
+            app.logger.error("Could not connect to Anthropic API")
+            yield sse("error", {"error": "Could not connect to the AI service. Please try again in a moment."})
+            return
+        except Exception as e:
+            app.logger.error(f"Unexpected Anthropic API error: {type(e).__name__}: {e}")
+            yield sse("error", {"error": "Something went wrong. Please try again."})
+            return
 
-    threading.Thread(
-        target=log_submission,
-        args=(email, policy, result.get("verdict", "")),
-        daemon=True,
-    ).start()
-    return jsonify(result)
+        if message.stop_reason == "refusal":
+            app.logger.warning("Model declined the request")
+            yield sse("error", {"error": "This request could not be analyzed. Try rephrasing the policy."})
+            return
+
+        raw = next((b.text for b in message.content if b.type == "text"), "")
+
+        try:
+            result = json.loads(raw)
+        except json.JSONDecodeError:
+            # The model occasionally emits trailing commas before } or ]
+            cleaned = re.sub(r",(\s*[}\]])", r"\1", raw)
+            try:
+                result = json.loads(cleaned)
+            except json.JSONDecodeError:
+                threading.Thread(
+                    target=log_submission, args=(email, policy, ""), daemon=True
+                ).start()
+                yield sse("result", {"raw_response": raw, "parse_error": True})
+                return
+
+        threading.Thread(
+            target=log_submission,
+            args=(email, policy, result.get("verdict", "")),
+            daemon=True,
+        ).start()
+        yield sse("result", result)
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 if __name__ == "__main__":

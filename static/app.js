@@ -242,32 +242,82 @@ document.addEventListener("DOMContentLoaded", function () {
             body: JSON.stringify({ policy: policy, email: email }),
         })
             .then(function (response) {
-                return response.json().then(function (data) {
-                    return { ok: response.ok, data: data };
-                });
-            })
-            .then(function (result) {
-                resetForm();
+                var type = response.headers.get("Content-Type") || "";
 
-                if (!result.ok) {
-                    showError(result.data.error || "Something went wrong. Please try again.");
-                    return;
+                // Validation failures come back as plain JSON, not a stream.
+                if (type.indexOf("text/event-stream") === -1) {
+                    return response.json().then(function (data) {
+                        resetForm();
+                        showError(data.error || "Something went wrong. Please try again.");
+                    });
                 }
-                if (result.data.parse_error) {
-                    showRaw(result.data.raw_response);
-                    return;
-                }
-                if (result.data.clarification_needed) {
-                    renderClarification(result.data);
-                    return;
-                }
-                renderResults(result.data);
+
+                return readEventStream(response, function (event, payload) {
+                    resetForm();
+                    if (event === "error") {
+                        showError(payload.error || "Something went wrong. Please try again.");
+                    } else if (payload.parse_error) {
+                        showRaw(payload.raw_response);
+                    } else if (payload.clarification_needed) {
+                        renderClarification(payload);
+                    } else {
+                        renderResults(payload);
+                    }
+                });
             })
             .catch(function () {
                 resetForm();
-                showError("Could not connect to the server. Make sure the app is running.");
+                showError("The connection dropped before the analysis finished. Please try again.");
             });
     });
+
+    // Minimal SSE reader. EventSource cannot POST, so the stream is parsed by hand.
+    function readEventStream(response, onEvent) {
+        var reader = response.body.getReader();
+        var decoder = new TextDecoder();
+        var buffer = "";
+        var delivered = false;
+
+        function handleChunk(result) {
+            if (result.done) {
+                if (!delivered) {
+                    resetForm();
+                    showError("The analysis ended before it finished. Please try again.");
+                }
+                return;
+            }
+
+            buffer += decoder.decode(result.value, { stream: true });
+
+            var parts = buffer.split("\n\n");
+            buffer = parts.pop();
+
+            parts.forEach(function (block) {
+                var name = null;
+                var data = "";
+                block.split("\n").forEach(function (line) {
+                    if (line.indexOf("event:") === 0) {
+                        name = line.slice(6).trim();
+                    } else if (line.indexOf("data:") === 0) {
+                        data += line.slice(5).trim();
+                    }
+                    // lines starting with ":" are keepalive comments; ignore them
+                });
+                if (!name || !data) return;
+                try {
+                    delivered = true;
+                    onEvent(name, JSON.parse(data));
+                } catch (e) {
+                    resetForm();
+                    showError("The analysis came back in a format we could not read.");
+                }
+            });
+
+            return reader.read().then(handleChunk);
+        }
+
+        return reader.read().then(handleChunk);
+    }
 
     function resetForm() {
         stopLoadingMessages();
